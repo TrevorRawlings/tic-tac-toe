@@ -1,0 +1,46 @@
+version: '3'
+services:
+  postgres:
+    image: "postgres" # use latest official postgres version
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=ttt
+    volumes:
+      - ./resources/initialize-postgres/:/docker-entrypoint-initdb.d/
+    expose:
+      - "5432"
+    ports:
+      - 127.0.0.1:5432:5432
+    volumes:
+      - database-data:/var/lib/postgresql/data/ # persist data even if container shuts down
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - DB_URL="jdbc:postgresql://postgres:5432/ttt"
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+    command: webapp
+    depends_on:
+      - postgres
+    volumes:
+      - ~/.m2:/root/.m2
+
+  integration-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile-integration-tests
+    environment:
+      - DB_URL="jdbc:postgresql://postgres:5432/ttt"
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+    depends_on:
+      - postgres
+    volumes:
+      - ~/.m2:/root/.m2
+
+volumes:
+  database-data:

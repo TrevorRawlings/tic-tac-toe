@@ -1,0 +1,40 @@
+version: 2
+jobs:
+  cache-dependencies:
+    machine:
+      image: circleci/classic:latest
+    steps:
+      - checkout
+      - &restore-cache
+        restore_cache:
+          key: app-cache-v1-{{ checksum "project.clj" }}
+      - &install-lein-deps
+        run:
+          name: Install leiningen dependencies
+          command: lein deps
+      - save_cache:
+          paths:
+            - ~/.m2
+          key: app-cache-v1-{{ checksum "project.clj" }}
+  test:
+    machine:
+      image: circleci/classic:latest
+    steps:
+      - checkout
+      - *restore-cache
+      - *install-lein-deps
+      - run:
+          command: lein cljfmt check
+      - run:
+          command: lein eastwood
+      - run:
+          command: lein test
+
+workflows:
+  version: 2
+  build-and-test:
+    jobs:
+      - cache-dependencies
+      - test:
+          requires:
+            - cache-dependencies

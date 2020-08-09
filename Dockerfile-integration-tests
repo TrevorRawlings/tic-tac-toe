@@ -1,0 +1,6 @@
+FROM clojure:openjdk-11-lein-2.9.1
+MAINTAINER trevor
+
+WORKDIR /usr/src/app
+COPY . ./
+CMD ["/bin/bash"]
