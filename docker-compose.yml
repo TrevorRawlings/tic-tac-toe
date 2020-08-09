@@ -5,7 +5,7 @@ services:
     environment:
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=ttt
+      - POSTGRES_DB=tic_tac_toe
     volumes:
       - ./resources/initialize-postgres/:/docker-entrypoint-initdb.d/
     expose:
@@ -20,7 +20,7 @@ services:
       context: .
       dockerfile: Dockerfile
     environment:
-      - DB_URL="jdbc:postgresql://postgres:5432/ttt"
+      - DB_URL="jdbc:postgresql://postgres:5432/tic_tac_toe"
       - DB_USERNAME=postgres
       - DB_PASSWORD=password
     command: webapp
@@ -34,7 +34,7 @@ services:
       context: .
       dockerfile: Dockerfile-integration-tests
     environment:
-      - DB_URL="jdbc:postgresql://postgres:5432/ttt"
+      - DB_URL="jdbc:postgresql://postgres:5432/tic_tac_toe"
       - DB_USERNAME=postgres
       - DB_PASSWORD=password
     depends_on:
