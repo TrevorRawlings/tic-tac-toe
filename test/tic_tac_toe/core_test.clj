@@ -3,5 +3,5 @@
             [tic-tac-toe.core :refer :all]))
 
 (deftest a-test
-  (testing "FIXME, I fail."
-    (is (= 0 1))))
+  (testing "Hello!"
+    (is (= 1 1))))

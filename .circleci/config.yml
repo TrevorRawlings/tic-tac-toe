@@ -29,6 +29,18 @@ jobs:
           command: lein eastwood
       - run:
           command: lein test
+  build:
+    docker:
+      - image: docker:git
+    steps:
+      - checkout
+      - *restore-cache
+      - setup_remote_docker
+      - run:
+          name: Build the docker image
+          command: |
+            cp -r /home/circleci/.m2 .
+            docker build .
 
 workflows:
   version: 2
@@ -36,5 +48,8 @@ workflows:
     jobs:
       - cache-dependencies
       - test:
+          requires:
+            - cache-dependencies
+      - build:
           requires:
             - cache-dependencies
