@@ -9,14 +9,14 @@
    [tic-tac-toe.games.tic-tac-toe :as ttt]))
 
 (s/fdef all-games-for-player
-  :args (s/cat :player ::spec/player-id)
+  :args (s/cat :player ::spec/player)
   :ret (s/coll-of ::spec/game))
 
 (defn all-games-for-player
   "returns all of the games associated with the user. Returns games ordered by created-at,
   with the most recent game first"
   [player-id]
-  (db/query {:select [:g.id, :g.moves, :g.created-at, :g.updated-at]
+  (db/query {:select [:g.id, :g.state, :g.created-at, :g.updated-at]
              :from   [[:games :g]]
              :join [[:game-players :gp] [:= :gp.game_id :g.id]]
              :where  [:= :gp.player-id (:id player-id)]
@@ -28,7 +28,6 @@
   (let [filter-fn (if (= "latest" game-id-or-string)
                     (constantly true)
                     #(= (str (:id %)) game-id-or-string))]
-
     (some->> player
              all-games-for-player
              (filter filter-fn)
@@ -38,9 +37,9 @@
   :args (s/cat :game ::spec/game)
   :ret ::spec/game)
 
-(defn save [{:keys [:id :moves] :as game}]
+(defn save [{:keys [:id :state] :as game}]
   (let [updated-at (db/now)
-        game* {:moves moves :updated_at updated-at}]
+        game* {:state state :updated_at updated-at}]
     (db/update! :games game* ["id = ?" id])
     (assoc game :updated-at updated-at)))
 
@@ -62,8 +61,8 @@
       game)))
 
 (defn validate-next-move
-  [{:keys [state] :as game} player move]
-  (ttt/validate-movement state player move))
+  [{:keys [state] :as game} move]
+  (ttt/validate-movement state move))
 
 (defn play-next-move
   [{:keys [state] :as game} _ move]

@@ -25,7 +25,6 @@
 ;; TODO: Replace with user authentication. The session cookie should be signed when a secret that is validated
 ;;       before data in the cookie is used
 
-
 (defn ->uuid [uuid-str]
   (when (uuid/uuid-string? uuid-str)
     (uuid/as-uuid uuid-str)))
@@ -52,15 +51,18 @@
                              players/load-player-by-id)]
                  (assoc request :player player)))))))
 
-(defn get-players [request]
+(defn get-players [_]
   {:status 200
    :body (players/all-players)})
 
 (s/def ::game-id ::spec/uuid-str-or-latest)
+(s/def ::new-game-params (s/keys :req-un []))
 (s/def ::get-game-params (s/keys :req-un [::game-id]))
 (s/def ::post-game-move-path-params (s/keys :req-un [::game-id]))
+(s/def ::post-game-move-query-params (s/keys :req-un [::spec/row
+                                                      ::spec/column]))
 
-(defn post-game-new [{{:keys [other-player-id]} :query-params :as request}]
+(defn post-game-new [{{:strs [other-player-id]} :params :as request}]
   (let [player (player-id-from-cookie request)
         other-player (some->> other-player-id
                               ->uuid
@@ -70,7 +72,6 @@
 
     (cm/match
      [(boolean player) (boolean other-player)]
-
       [false _] {:status 401 :body "Session invalid"}
       [true false] {:status 404 :body "Not Found"}
       [true true] {:status 201 :body (games/render new-game)})))
@@ -78,22 +79,22 @@
 (defn get-game [{{:keys [game-id]} :path-params :as request}]
   (let [player (player-id-from-cookie request)
         game (when player (games/find-game-by-id player game-id))]
+
     (cm/match
      [(boolean player) (boolean game)]
-
       [false _] {:status 401 :body "Session invalid"}
       [true false] {:status 404 :body "Not Found"}
       [true true] {:status 200 :body (games/render game)})))
 
-(defn post-game-move [{{:keys [game-id]} :path-params {:keys [row column]} :query-params :as request}]
+(defn post-game-move [{{{:keys [game-id]} :path {:keys [row column]} :query} :parameters :as request}]
   (let [player (player-id-from-cookie request)
         game (when player (games/find-game-by-id player game-id))
         move {:row row :column column :player-id (:id player)} ;; TODO row & column is specific to tic-tac-toe ... somehow make this generic
-        validation (when game (games/validate-next-move game player move))
+        validation (when game (games/validate-next-move game move))
         game* (when (:success validation) (games/play-next-move game player move))]
+
     (cm/match
      [(boolean player) (boolean game) (:success validation)]
-
       [false _ _] {:status 401 :body "Session invalid"}
       [true false _] {:status 404 :body "Not Found"}
       [true true false] {:status 409 :body (:message validation)}
@@ -105,7 +106,7 @@
     [["/swagger.json"
       {:get {:no-doc true
              :swagger {:info {:title "tic-tac-toe--api"
-                              :description "HTTP interface for multiplayer boardgames"}}
+                              :description "HTTP interface for creating and playing tic-tac-toe games"}}
              :handler (swagger/create-swagger-handler)}}]
      ["/api"
       {:middleware [[rcookies/wrap-cookies] ;; FIXME for some reason this is being ignored
@@ -115,23 +116,27 @@
                          :handler get-players}}]
       ["/games"
        ["/new" {:post {:responses {201 {:body map?}
+                                   404 {:body string?}
                                    409 {:body string?}}
                        :summary "Create a new game for the specified players"
                        :coercion reitit.coercion.spec/coercion
+                       :parameters {:path ::new-game-params}
                        :handler post-game-new}}]
-       ["/:game-id" {:get {:responses {200 {:body map?}
-                                       404 {:body string?}
-                                       401 {:body string?}}
-                           :summary "fetches details of the specified game. Pass 'latest' to return details of the most recently created game"
-                           :coercion reitit.coercion.spec/coercion
-                           :parameters {:path ::get-game-params}
-                           :handler get-game}}
+       ["/:game-id"
+        ["/" {:get {:responses {200 {:body map?}
+                                404 {:body string?}
+                                401 {:body string?}}
+                    :summary "fetches details of the specified game. Pass 'latest' to return details of the most recently created game"
+                    :coercion reitit.coercion.spec/coercion
+                    :parameters {:path ::get-game-params}
+                    :handler get-game}}]
         ["/move" {:post {:responses {201 {:body map?}
                                      404 {:body string?}
                                      409 {:body string?}}
                          :summary "Append next move to the game"
                          :coercion reitit.coercion.spec/coercion
-                         :parameters {:path ::post-game-move-path-params}
+                         :parameters {:path ::post-game-move-path-params
+                                      :query ::post-game-move-query-params}
                          :handler post-game-move}}]]]]]
     {:validate rs/validate
      :exception pretty/exception

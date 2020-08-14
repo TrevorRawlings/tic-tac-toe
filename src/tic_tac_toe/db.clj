@@ -10,11 +10,11 @@
   (:import (java.sql Timestamp)))
 
 (defn connection []
-  (let [[url username password]
-        (mapv env [:db-name :db-username :db-password])]
+  (let [[name username password host port]
+        (mapv env [:db-name :db-username :db-password :db-host :db-port])]
     {:classname "org.postgresql.Driver"
      :subprotocol  "postgresql"
-     :subname url
+     :subname (format "//%s:%s/%s" host port name)
      :user username
      :password password}))
 

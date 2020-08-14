@@ -1,21 +1,21 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE players (
-   id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v1(),
+   id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
    name VARCHAR(255) NOT NULL,
    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 CREATE TABLE games (
-   id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v1(),
+   id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
    state JSONB NOT NULL,
    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
 CREATE TABLE game_players (
- id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v1(),
+ id uuid PRIMARY KEY NOT NULL DEFAULT uuid_generate_v4(),
  game_id uuid NOT NULL REFERENCES games(id),
  player_id uuid NOT NULL REFERENCES players(id),
  created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),

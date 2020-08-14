@@ -12,11 +12,13 @@
 (s/def ::player (s/keys :req-un [::id
                                  ::name]))
 
-(s/def ::action map?)
+(s/def ::row (s/int-in 0 3))
+(s/def ::column (s/int-in 0 3))
 (s/def ::move (s/keys :req-un [::player-id
-                               ::action]))
+                               ::row
+                               ::column]))
 (s/def ::moves  (s/coll-of ::move))
-(s/def ::game (s/keys :req-un [::id ::moves]))
+(s/def ::game (s/keys :req-un [::id ::state]))
 
 (s/def ::http-port pos-int?)
 (s/def ::config (s/keys :req-un [::http-port]))

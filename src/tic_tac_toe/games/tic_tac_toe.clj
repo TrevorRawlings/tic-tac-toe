@@ -1,32 +1,20 @@
 (ns tic-tac-toe.games.tic-tac-toe
   (:require
-   [clj-postgresql.types]
-   [clojure.spec.alpha :as s]
-   [tic-tac-toe.spec :as spec]))
+   [clj-postgresql.types]))
 
 (defn- empty-board []
   [["." "." "."]
    ["." "." "."]
    ["." "." "."]])
 
-(s/def ::board coll?)
-(s/def ::row (s/int-in 0 2))
-(s/def ::coll (s/int-in 0 2))
-
-(s/def ::move (s/keys :req-un [::spec/player-id
-                               ::row
-                               ::column]))
-
-(s/fdef apply-move
-  :args (s/cat :board ::board
-               :move ::move)
-  :ret ::board)
+(defn- id->keyword [uuid]
+  (-> uuid str keyword))
 
 (defn- construct-board
   "Applies each of the moves one at a time to rebuild the current state of the game"
   [{:keys [moves players]}]
   (let [apply-move (fn [board {:keys [player-id row column]}]
-                     (let [character (player-id players)]
+                     (let [character (players (id->keyword player-id))]
                        (assoc-in board [row column] character)))]
     (reduce apply-move (empty-board) moves)))
 
@@ -35,21 +23,21 @@
   [board piece]
   (let [selectors [first second last]
         win? (fn [items] (every? #(= % piece) items))]
-    (any?
-     (flatten
-      [;; check for complete rows
-       (map (fn [row] (win? (row board))) selectors)
-         ;; check for complete columns
-       (map (fn [column] (win? (map column board))) selectors)
-         ;; check the diagonals
-       (win? (map (fn [i] (get-in board [i i])) [0 1 2]))
-       (win? (map (fn [i] (get-in board [i (- 2 i)])) [0 1 2]))]))))
+    (some true?
+          (flatten
+           [;; check for complete rows
+            (map (fn [row] (win? (row board))) selectors)
+            ;; check for complete columns
+            (map (fn [column] (win? (map column board))) selectors)
+            ;; check the diagonals
+            (win? (map (fn [i] (get-in board [i i])) [0 1 2]))
+            (win? (map (fn [i] (get-in board [i (- 2 i)])) [0 1 2]))]))))
 
 (defn winner
   "Returns 'O' or 'X' if the player has won"
   [board]
   (->> ["0" "X"]
-       (keep (partial player-has-won? board))
+       (filter (partial player-has-won? board))
        first))
 
 (defn draw?
@@ -61,15 +49,17 @@
        (= 9)))
 
 (defn validate-movement
-  [{:keys [players moves] :as game-state} player {:keys [row column] :as move}]
+  [{:keys [players moves] :as game-state} {:keys [row column] :as move}]
+
   (let [board (construct-board game-state)
-        invalid-player (not (contains? players (:id player)))
+        player-id (id->keyword (:player-id move))
+        invalid-player (not (contains? players player-id))
         game-over (or (boolean (winner board))
                       (draw? board))
         already-taken (not= (get-in board [row column])
                             ".")
-        wrong-player (= (:player-id (last moves))
-                        (:player-id move))]
+        last-player (-> (last moves) :player-id id->keyword)
+        wrong-player (= last-player player-id)]
     (cond
       invalid-player {:success false :message "Invalid Player"}
       game-over {:success false :message "Game has already been completed"}
@@ -87,13 +77,14 @@
         winner (winner board)
         draw (draw? board)
         message (cond
-                  winner (str winner "has won!")
-                  draw "It is a draw!")]
+                  winner (str winner " has won!")
+                  draw "It is a draw!"
+                  :else "")]
     {:board board
      :message message}))
 
 (defn new-game
   [player-1 player-2]
-  {:players {(:id player-1) "0"
-             (:id player-2) "X"}
+  {:players {(id->keyword (:id player-1)) "0"
+             (id->keyword (:id player-2)) "X"}
    :moves []})

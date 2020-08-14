@@ -16,7 +16,7 @@ jobs:
           paths:
             - ~/.m2
           key: app-cache-v1-{{ checksum "project.clj" }}
-  test:
+  lint:
     machine:
       image: circleci/classic:latest
     steps:
@@ -27,29 +27,35 @@ jobs:
           command: lein cljfmt check
       - run:
           command: lein eastwood
-      - run:
-          command: lein test
-  build:
-    docker:
-      - image: docker:git
+  docker-test:
+    machine:
+      image: circleci/classic:latest
     steps:
       - checkout
       - *restore-cache
-      - setup_remote_docker
       - run:
           name: Build the docker image
           command: |
             cp -r /home/circleci/.m2 .
             docker build .
+      - run:
+          name: Run the tests within a docker container
+          command: |
+            docker-compose build integration-tests
+            docker-compose up -d
+            docker-compose ps
+            sleep 15
+            lein flyway migrate
+            docker-compose run integration-tests lein test
 
 workflows:
   version: 2
   build-and-test:
     jobs:
       - cache-dependencies
-      - test:
+      - lint:
           requires:
             - cache-dependencies
-      - build:
+      - docker-test:
           requires:
             - cache-dependencies
