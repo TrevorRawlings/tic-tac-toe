@@ -126,13 +126,13 @@
                            :coercion reitit.coercion.spec/coercion
                            :parameters {:path ::get-game-params}
                            :handler get-game}}
-         ["/move" {:post {:responses {201 {:body map?}
-                                      404 {:body string?}
-                                      409 {:body string?}}
-                          :summary "Append next move to the game"
-                          :coercion reitit.coercion.spec/coercion
-                          :parameters {:path ::post-game-move-path-params}
-                          :handler post-game-move}}]]]]]
+        ["/move" {:post {:responses {201 {:body map?}
+                                     404 {:body string?}
+                                     409 {:body string?}}
+                         :summary "Append next move to the game"
+                         :coercion reitit.coercion.spec/coercion
+                         :parameters {:path ::post-game-move-path-params}
+                         :handler post-game-move}}]]]]]
     {:validate rs/validate
      :exception pretty/exception
      :data {:coercion reitit.coercion.spec/coercion
